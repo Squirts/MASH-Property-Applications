@@ -8,7 +8,7 @@ How to use:
 
 3. Open EventLogger.html
 
-4. Click on the Employee Manager link to add your employee information. Choose a color - this will be the color that makes your events stand out in the table from the other employees if necessary.
+4. Click on the Employee Manager link to add your employee information. Choose a color - this will be the color that makes your events stand out in the table from the other employees if necessary. If you are not at the Barratt Inn, you can change your location at with the "Change Location" link at the top of the page.
 
 5. Click on Event Logger. Now you can select your name from the dropdown to being adding events.
 
@@ -25,3 +25,9 @@ How to use:
 Important Note: This application currently uses localStorage, meaning the information it stores is unique to the device using it, and it doesn't require an internet connection for any of its functionality. Events can only be shared by exporting to xml, transferring the file to another device, and importing those events via the Import XML button.
 
 In this future, this application may be upgraded to a full-stack model, which will utilize an online database to share events over the internet - but that is a long way off. For now, enjoy the offline functionality of a simple text-based event logger for any device, and share the download link with any employee you wish to share with.
+
+Update 10/9/23 - Fixed a bug that, when an employee’s information was edited, that information was not reflected in the exported xml.
+
+Update 10/10/2023 - Added validation for special characters in the event text field. This should fix any xml exports/imports from breaking the imported events table. If you need to fix any xml files, download Notepad++, us the find and replace function (Ctrl + R), check the box that says "use regular expressions",  put /<eventText>[^<]*[&<>\"'][^<]*<\/eventText>/ into the find field, and any text (or "and", or just some whitespace) that doesnt include { &, <, >, " or ' }, click the "Replace All" button, and save the xml file; you can now import the file. You may also need to manually edit any entries with those special characters; you can use your browser's Find function (Ctrl + F) to find any instances of the forementioned special characters.
+
+Update 10/11/2023 - Removed Edit button from Imported Events table. This was causing some weird issues where if the event text of that row was the same value as another row in either the event or imported event table, it would break the imported event table. Will investigate further and re-implement at a later date.
