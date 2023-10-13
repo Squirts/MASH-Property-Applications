@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="location">Barratt Inn Event Logger</title>
+    <title id="location">Event Logger</title>
 
 
     <!--
@@ -142,6 +142,11 @@
         button:hover {
             background-color: #0056b3;
         }
+
+        #locationInput {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 
@@ -160,6 +165,8 @@
     <nav>
         <a href="#" onclick="showEventSection()">Event Logger</a>
         <a href="#" onclick="showEmployeeSection()">Employee Manager</a>
+        <a href="#" onclick="showChangeLocation()">Change Location</a>
+        <div id="locationContainer"></div>
         <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
     </nav>
 
@@ -250,6 +257,8 @@
     <br><br>
     <div id="importedEventsSection">
         <h2>Imported Events</h2>
+        <button id="deleteAllButton" style="float:inline-end">Delete All</button>
+
         <table id="importedEventTable">
             <thead>
                 <tr>
@@ -277,10 +286,46 @@
 
 
     <script>
+        //Location
+        let locationValue = "Barratt Inn";
+        document.title = `${locationValue} Event Logger`;
+        function showChangeLocation() {
+            // Create the text input and set its value to the current locationValue
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = locationValue;
+            input.id = 'locationInput';
 
-        const employees = JSON.parse(localStorage.getItem('employees')) || [];
-        const events = JSON.parse(localStorage.getItem('events')) || [];
-        const importedEvents = JSON.parse(localStorage.getItem('importedEvents')) || [];
+            // Create the save button
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.onclick = saveNewLocation;
+
+            // Append the input and button to the nav
+            const nav = document.querySelector('nav');
+            nav.appendChild(input);
+            nav.appendChild(saveButton);
+        }
+
+        function saveNewLocation() {
+            // Get the value from the text input
+            const locationInput = document.getElementById('locationInput');
+            locationValue = locationInput.value;
+
+            // Update the document title with the new location value
+            document.title = `${locationValue} Event Logger`;
+
+            // Remove the text input and save button
+            locationInput.remove();
+            this.remove();  // 'this' refers to the saveButton in this context
+        }
+
+
+
+
+        let employees = JSON.parse(localStorage.getItem('employees')) || [];
+        let events = JSON.parse(localStorage.getItem('events')) || [];
+        let importedEvents = JSON.parse(localStorage.getItem('importedEvents')) || [];
 
         // Initial population of tables
         updateEventTable();
@@ -329,20 +374,46 @@
                 errorMessage.textContent = '';  // Clear the error message if validation passes
             }
 
-            const employee = employees.find(emp => emp.name === empName);
-            const bgColor = employee ? employee.color : '#FFF';  // Default to white if not found
+            //Check for special characters
+            if (!isValidEventText(eventText)) {
+                // Display an error message to the user
+                errorMessage.textContent = 'Invalid characters detected in the event text. Please avoid using special characters like &, <, >, ", and \'.';
 
-            const eventObj = { empName, eventTime, eventText, bgColor };
-            events.push(eventObj);
+            } else {
+                errorMessage.textContent = '';  // Clear the error message if validation passes
 
-            // Save events to localStorage
-            localStorage.setItem('events', JSON.stringify(events));
 
-            // Update the event table
-            updateEventTable();
+                // Proceed with adding the event
 
-            // Clear the fields
-            document.getElementById('eventForm').reset();
+                const employee = employees.find(emp => emp.name === empName);
+                const bgColor = employee ? employee.color : '#FFF';  // Default to white if not found
+
+                const eventObj = { empName, eventTime, eventText, bgColor };
+                events.push(eventObj);
+
+                // Save events to localStorage
+                localStorage.setItem('events', JSON.stringify(events));
+
+                // Update the event table
+                updateEventTable();
+
+                // Clear the fields
+                document.getElementById('eventForm').reset();
+            }
+
+            //Check for special characters
+            function isValidEventText(eventText) {
+                // List of disallowed characters
+                const disallowedChars = ['&', '<', '>', '\"', '\''];
+
+                // Check if the eventText contains any of the disallowed characters
+                for (let char of disallowedChars) {
+                    if (eventText.includes(char)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
 
 
@@ -378,7 +449,8 @@
                 // Edit button
                 const editButton = document.createElement('button');
                 editButton.textContent = 'Edit';
-                editButton.addEventListener('click', () => startEdit(row, eventItem));  // Pass the event object directly using eventItem instead of eventObj
+                editButton.addEventListener('click', () => startEditMainEvent(row, eventItem));
+
                 actionsCell.appendChild(editButton);
 
                 // Delete button
@@ -386,35 +458,57 @@
                 deleteButton.textContent = 'Delete';
                 deleteButton.addEventListener('click', () => deleteEvent(index));
                 actionsCell.appendChild(deleteButton);
+
             });
         }
 
-        function startEdit(row) {
-            const eventTextCell = row.cells[2]; // Get the third cell (0-indexed) from the row
-            const originalText = eventTextCell.textContent;
+        function startEditMainEvent(row, eventItem) {
+    const eventTextCell = row.cells[2];
+    const originalText = eventTextCell.textContent;
 
-            // Create an input element for editing
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = originalText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = originalText;
 
-            // Clear the cell and append the input
-            eventTextCell.innerHTML = '';
-            eventTextCell.appendChild(input);
+    eventTextCell.innerHTML = '';
+    eventTextCell.appendChild(input);
 
-            // Add a "Save" button
-            const saveButton = document.createElement('button');
-            saveButton.textContent = 'Save';
-            saveButton.addEventListener('click', () => {
-                const updatedText = input.value;
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save';
+    saveButton.addEventListener('click', () => {
+        eventItem.eventText = input.value;
+        localStorage.setItem('events', JSON.stringify(events));
+        updateEventTable();
+    });
 
-                // Update the eventText in the event object directly
-                eventTextCell.innerHTML = updatedText;
-            });
+    eventTextCell.appendChild(saveButton);
+}
 
-            // Add the "Save" button next to the input
-            eventTextCell.appendChild(saveButton);
-        }
+function startEditImportedEvent(row, eventItem) {
+    const eventTextCell = row.cells[2];
+    const originalText = eventTextCell.textContent;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = originalText;
+
+    eventTextCell.innerHTML = '';
+    eventTextCell.appendChild(input);
+
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save';
+    saveButton.addEventListener('click', () => {
+        eventItem.eventText = input.value;
+        localStorage.setItem('importedEvents', JSON.stringify(importedEvents));
+        updateImportedEventTable();
+    });
+
+    eventTextCell.appendChild(saveButton);
+}
+
+
+
+
 
 
         function showEventSection() {
@@ -493,10 +587,28 @@ EEEEE  M       M  P       LLLLL     OOOO    Y    EEEEE  EEEEE   SSSSS
             }
 
             if (employeeBeingEdited) {
+                // Before editing, capture the old name for later comparison
+                const oldName = employeeBeingEdited.name;
+
                 // Editing
                 employeeBeingEdited.name = empName;
                 employeeBeingEdited.phone = empPhone;
-                employeeBeingEdited.color = empColor;
+
+                // Check if color is changed
+                if (employeeBeingEdited.color !== empColor) {
+                    employeeBeingEdited.color = empColor;
+
+                    // If color is changed, iterate through events and update the color for this employee's events
+                    events.forEach(event => {
+                        if (event.empName === oldName) {
+                            event.bgColor = empColor;
+                        }
+                    });
+
+                    // Update localStorage for events
+                    localStorage.setItem('events', JSON.stringify(events));
+                }
+
                 employeeBeingEdited.startTime = empStartTime;
                 employeeBeingEdited.endTime = empEndTime;
                 employeeBeingEdited = null;  // Reset after editing
@@ -672,7 +784,7 @@ IIIIII  M       M  P        OOOO  R   R     TT
             tableBody.innerHTML = '';
 
             importedEvents.forEach(event => {
-                addRowToImportedEvents(event.employee, event.eventTime, event.eventText, event.colorCode);
+                addRowToImportedEvents(event.empName, event.eventTime, event.eventText, event.colorCode);
             });
         }
 
@@ -695,7 +807,9 @@ IIIIII  M       M  P        OOOO  R   R     TT
 
                 reader.onload = function (e) {
                     const xmlString = e.target.result;
+                    console.log(xmlString);
                     parseXML(xmlString);
+
                 };
 
                 reader.readAsText(file);
@@ -707,50 +821,52 @@ IIIIII  M       M  P        OOOO  R   R     TT
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlString, 'application/xml');
 
+                //Check for XML parsing errors
+                if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                    console.error("Error parsing XML");
+
+                    return;
+                }
+
                 // Get the events from the parsed XML
                 const events = xmlDoc.querySelectorAll('event');
 
                 // Iterate through the events and populate the "Imported Events" table
                 events.forEach(event => {
-                    // Extract data from the XML elements (e.g., employee, eventTime, eventText)
-                    const employee = event.querySelector('empName')?.textContent || '';
+                    // Extract data from the XML elements (e.g., empName, eventTime, eventText)
+                    const empName = event.querySelector('empName')?.textContent || '';
+                    console.log("Processing empName: ", empName); // Debugging line
                     const eventTime = event.querySelector('eventTime')?.textContent || '';
                     const eventText = event.querySelector('eventText')?.textContent || '';
                     let colorCode = event.querySelector('colorCode')?.textContent;
+
                     if (!colorCode) {
-                        const matchedEmployee = employees.find(e => e.name === employee);
+                        const matchedEmployee = employees.find(e => e.name === empName);
                         colorCode = matchedEmployee ? matchedEmployee.color : '#FFF';
                     }
-                    //debug
-                    console.log("Parsed colorCode: ", colorCode);
 
+                    // Debugging lines
+                    console.log("Parsed colorCode: ", colorCode);
+                    console.log("Parsed eventTime: ", eventTime);
+                    console.log("Parsed eventText: ", eventText);
 
                     // Add a new row to the "Imported Events" table with the extracted data
-                    addRowToImportedEvents(employee, eventTime, eventText, colorCode);
-                    //debug
-                    console.log("Setting row color:", colorCode);
-
+                    addRowToImportedEvents(empName, eventTime, eventText, colorCode);
 
                     // Append to the importedEvents array
-                    importedEvents.push({ employee, eventTime, eventText, colorCode });
+                    importedEvents.push({ empName, eventTime, eventText, colorCode });
                 });
                 // Update local storage after parsing all events
                 localStorage.setItem('importedEvents', JSON.stringify(importedEvents));
             }
+
         }
 
-        function addRowToImportedEvents(employee, eventTime, eventText, colorCode) {
+        function addRowToImportedEvents(empName, eventTime, eventText, colorCode) {
             const tableBody = document.querySelector('#importedEventTable tbody');
             const row = tableBody.insertRow();
+            const eventItem = { empName, eventTime, eventText, colorCode };  // Create an eventItem for the current row
 
-            row.insertCell(0).textContent = employee;
-            row.insertCell(1).textContent = eventTime;
-            row.insertCell(2).textContent = eventText;
-        }
-
-        function addRowToImportedEvents(employee, eventTime, eventText, colorCode) {
-            const tableBody = document.querySelector('#importedEventTable tbody');
-            const row = tableBody.insertRow();
             row.style.backgroundColor = colorCode;
 
             const cell1 = row.insertCell(0);
@@ -758,15 +874,15 @@ IIIIII  M       M  P        OOOO  R   R     TT
             const cell3 = row.insertCell(2);
             const cell4 = row.insertCell(3);
 
-            cell1.textContent = employee;
+            cell1.textContent = empName;
             cell2.textContent = eventTime;
             cell3.textContent = eventText;
 
             // Create "Edit" button
-            const editButton = document.createElement('button');
-            editButton.textContent = 'Edit';
-            editButton.onclick = () => startEdit(row);
-            cell4.appendChild(editButton);
+            // const editButton = document.createElement('button');
+            // editButton.textContent = 'Edit';
+            // editButton.onclick = () => startEditImportedEvent(row, eventItem);
+            // cell4.appendChild(editButton);
 
             // Create "Delete" button
             const deleteButton = document.createElement('button');
@@ -811,6 +927,25 @@ IIIIII  M       M  P        OOOO  R   R     TT
             localStorage.setItem('importedEvents', JSON.stringify(importedEvents));
         }
 
+        //Delete All imported events button
+        document.getElementById('deleteAllButton').addEventListener('click', function () {
+            // Confirm before deleting all rows
+            if (!window.confirm('Are you sure you want to delete all events?')) {
+                return;
+            }
+
+            // Clear the table rows
+            const tableBody = document.querySelector('#importedEventTable tbody');
+            tableBody.innerHTML = '';
+
+            // Clear the importedEvents array
+            importedEvents = [];
+
+            // Update localStorage
+            localStorage.setItem('importedEvents', JSON.stringify(importedEvents));
+        });
+
+
         function getFormattedDateTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -830,6 +965,9 @@ IIIIII  M       M  P        OOOO  R   R     TT
             const tables = document.querySelectorAll('table');
             tables.forEach(table => table.classList.toggle('dark-mode'));
         }
+
+
+
     </script>
 </body>
 
